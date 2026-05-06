@@ -1,7 +1,8 @@
 name: egos-guard-brasil
-version: 0.1.0
-description: PII masking LGPD para respostas do agente — CPF, CNPJ, RG, telefone, endereço, placa
+version: 1.0.0
+description: PII masking LGPD — detecta e mascara CPF, CNPJ, RG, telefone, e-mail, CEP, placas, MASP, REDS. Conformidade Lei 13.709/2018.
 author: enioxt (EGOS Lab)
 homepage: https://github.com/enioxt/hermes-egos
-source: egos/packages/guard-brasil/src/pii-patterns.ts
-status: in_development      # HERMES-FORK-005
+source: egos/packages/guard-brasil/src/pii-patterns.ts (port TypeScript→Python)
+requires_env: []
+status: implemented

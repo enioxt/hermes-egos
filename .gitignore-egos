@@ -1,0 +1,5 @@
+# EGOS-specific ignores (complementam o .gitignore upstream)
+.env
+*.env.local
+profiles-templates/*/config-local.yaml
+upstream-monitor/*.local.md

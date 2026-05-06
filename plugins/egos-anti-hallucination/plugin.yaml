@@ -1,0 +1,8 @@
+name: egos-anti-hallucination
+version: 0.1.0
+description: 7 técnicas anti-alucinação — provenance, behavioral eval, RAG compression, ATRiAN, hybrid search, confidence scoring, source ranking
+author: enioxt (EGOS Lab)
+homepage: https://github.com/enioxt/hermes-egos
+source: egos/docs/knowledge/ANTI_HALLUCINATION_COMPLETE_GUIDE.md
+pitch: "Toda resposta tem prova. Você clica e vê o documento original."
+status: in_development      # HERMES-FORK-006

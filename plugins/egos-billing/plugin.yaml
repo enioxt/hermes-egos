@@ -1,0 +1,12 @@
+name: egos-billing
+version: 0.1.0
+description: OpenRouter per-client usage tracker — alertas 80%/100% via Telegram e WhatsApp
+author: enioxt (EGOS Lab)
+homepage: https://github.com/enioxt/hermes-egos
+requires_env:
+  - OPENROUTER_API_KEY      # chave do cliente (1 por cliente)
+  - TELEGRAM_BOT_TOKEN      # bot EGOS para alertas operacionais
+  - TELEGRAM_CHAT_ID        # chat do Enio (alertas operacionais)
+  - CLIENT_WA_NUMBER        # número WhatsApp do cliente (para alerta de limite)
+  - CLIENT_BUDGET_BRL       # orçamento mensal em BRL (ex: 500 para R$500/mês)
+status: in_development      # HERMES-FORK-004

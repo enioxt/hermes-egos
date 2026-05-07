@@ -6,6 +6,8 @@ Pitch: "Toda resposta tem prova. Você clica e vê o documento original.
         Se não tem prova, o sistema diz 'não encontro'."
 
 Inclui: Intent Guardrails (detecção de prompt injection ANTES de consultar KB).
+Vault integration [GROK-EVD-006]: verifica evidence_verified_knowledge via Supabase REST
+  antes de aceitar resposta sem chunks RAG. Opt-in: SUPABASE_URL + SUPABASE_ANON_KEY + VAULT_TENANT_ID.
 """
 
 import re
@@ -13,6 +15,70 @@ import os
 import json
 import urllib.request
 from typing import Optional
+
+
+# ─── Evidence Vault REST integration [GROK-EVD-006] ──────────────────────────
+
+_SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+_SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
+_VAULT_TENANT_ID = os.environ.get("VAULT_TENANT_ID", "")
+_VAULT_ENABLED = bool(_SUPABASE_URL and _SUPABASE_ANON_KEY and _VAULT_TENANT_ID)
+
+
+def check_vault_evidence(query: str, tenant_id: str | None = None) -> dict:
+    """
+    Verifica se há VerifiedKnowledge no vault que cubra a query.
+    Chamado quando validate_rag_response não encontra chunks RAG suficientes.
+
+    Returns:
+        {
+          'found': bool,
+          'verified': bool,
+          'evidence_ids': list[str],
+          'statements': list[str],
+          'source': 'vault' | 'none'
+        }
+    """
+    t_id = tenant_id or _VAULT_TENANT_ID
+    if not _VAULT_ENABLED or not t_id:
+        return {"found": False, "verified": False, "evidence_ids": [], "statements": [], "source": "none"}
+
+    # Truncar query para busca
+    search_term = query[:100].replace("'", "''")
+
+    try:
+        params = f"tenant_id=eq.{t_id}&approved_for_output=eq.true&statement=ilike.%25{urllib.parse.quote(search_term[:80])}%25&select=id,statement&limit=3"
+        url = f"{_SUPABASE_URL}/rest/v1/evidence_verified_knowledge?{params}"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "apikey": _SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {_SUPABASE_ANON_KEY}",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read().decode())
+            if data:
+                return {
+                    "found": True,
+                    "verified": True,
+                    "evidence_ids": [r["id"] for r in data],
+                    "statements": [r["statement"] for r in data],
+                    "source": "vault",
+                }
+    except Exception:
+        pass  # Non-blocking — vault check failure does not block response
+
+    return {"found": False, "verified": False, "evidence_ids": [], "statements": [], "source": "none"}
+
+
+# ─── urllib.parse shim (Python 3.9+ stdlib) ───────────────────────────────────
+try:
+    from urllib.parse import quote as _urllib_parse_quote
+    # Patch the module-level urllib.parse reference used in check_vault_evidence
+    import urllib.parse
+except ImportError:
+    pass
 
 
 # ─── Intent Guardrails (Pré-geração: detectar prompt injection) ────────────────
@@ -261,12 +327,30 @@ def validate_rag_response(
     conf = compute_confidence(compressed)
 
     if not conf["should_answer"]:
+        # Técnica 8 [GROK-EVD-006]: fallback to Evidence Vault before refusing
+        vault = check_vault_evidence(query)
+        if vault["found"] and vault["verified"]:
+            vault_response = (
+                " ".join(vault["statements"][:2])
+                + " [Fonte: Evidence Vault verificado]"
+            )
+            return {
+                "ok": True,
+                "action": "respond_from_vault",
+                "final_response": vault_response,
+                "confidence": conf,
+                "provenance": [{"source": "vault", "id": eid} for eid in vault["evidence_ids"]],
+                "vault": vault,
+                "atrian_passed": True,
+            }
         return {
             "ok": True,
             "action": "refuse_low_confidence",
             "final_response": conf["message"],
             "confidence": conf,
             "provenance": [],
+            "vault_checked": _VAULT_ENABLED,
+            "vault_found": False,
             "atrian_passed": True,
         }
 

@@ -1,0 +1,79 @@
+# Central EGOS — Profile: Enterprise
+# Tier: Enterprise (+API proxy, multi-tenant, audit trail completo)
+# Context budget: ~100k tokens alvo para trabalho útil
+#
+# GROK-CTX-002: 6 MCPs + Kanban multi-agent (Hermes v0.12+)
+# Inclui eval runner e observabilidade completa
+
+model:
+  default: "anthropic/claude-sonnet-4-6"
+  # Roteamento por tarefa (GROK-KBN-003):
+  # - Tarefas simples/rotina: Gemini Flash (barato)
+  # - Raciocínio complexo: Sonnet
+  # - Decisões críticas: Opus (explícito)
+  provider: "openrouter"
+
+# ── MCP Gateway: Enterprise carrega 6 servers ─────────────────────────────────
+mcp_servers:
+  egos-governance:
+    command: bun
+    args: ["/home/enio/egos/packages/mcp-governance/src/index.ts"]
+    timeout: 30
+
+  egos-memory:
+    command: bun
+    args: ["/home/enio/egos/packages/mcp-memory/src/index.ts"]
+    timeout: 30
+
+  egos-knowledge:
+    command: bun
+    args: ["/home/enio/egos/packages/knowledge-mcp/src/index.ts"]
+    timeout: 30
+
+  egos-guard-brasil:
+    command: bun
+    args: ["/home/enio/egos/packages/guard-brasil-mcp/src/index.ts"]
+    timeout: 30
+
+  egos-search:
+    command: bun
+    args: ["/home/enio/egos/packages/search-engine/src/mcp-server.ts"]
+    timeout: 60
+
+  egos-audit:
+    command: bun
+    args: ["/home/enio/egos/packages/audit/src/mcp-server.ts"]
+    timeout: 30
+    # Tools: log_action, get_audit_trail, compliance_check
+
+skills:
+  skill_nudge_iterations: 10
+  external_dirs:
+    - "/home/enio/hermes-egos/skills/egos-personas"
+    - "/home/enio/hermes-egos/skills/enterprise"
+
+plugins_enabled:
+  - egos-guard-brasil
+  - egos-anti-hallucination
+  - egos-kb-tools
+  - egos-billing
+  - egos-espiral             # Handoff humano ao vivo
+  - egos-dpio                # Qualificação setorial
+
+# ── Kanban multi-agent (Hermes v0.12+) ────────────────────────────────────────
+# GROK-KBN-001: Avaliar se kanban nativo do Hermes upstream funciona out-of-the-box
+# Por ora: deixar habilitado por default para Enterprise
+# Ref: docs/governance/KANBAN_IN_CENTRAL_EGOS.md (criado em GROK-KBN-004)
+
+# ── Context discipline ────────────────────────────────────────────────────────
+# Mesmo no Enterprise, aplicar disciplina de contexto (GROK-CTX-002..006)
+# Enterprise pode ter mais MCPs, mas cada sub-agent ainda carrega só o necessário
+tool_loop_guardrails:
+  soft:
+    same_tool_failure: 3
+  hard:
+    same_tool_failure: 8
+
+agent:
+  name: "Central EGOS Enterprise"
+  description: "Assistente governado multi-tenant com audit trail, billing e handoff humano"

@@ -1,0 +1,53 @@
+# Central EGOS — Profile: Pro
+# Tier: Pro (+CNAME, equipe de até 5)
+# Context budget: ~80k tokens alvo para trabalho útil
+#
+# GROK-CTX-002: 5 MCPs (governance + memory + knowledge + guard + research)
+
+model:
+  default: "anthropic/claude-sonnet-4-6"   # Sonnet para raciocínio mais complexo
+  provider: "openrouter"
+
+# ── MCP Gateway: Pro carrega 5 servers ────────────────────────────────────────
+mcp_servers:
+  egos-governance:
+    command: bun
+    args: ["/home/enio/egos/packages/mcp-governance/src/index.ts"]
+    timeout: 30
+
+  egos-memory:
+    command: bun
+    args: ["/home/enio/egos/packages/mcp-memory/src/index.ts"]
+    timeout: 30
+
+  egos-knowledge:
+    command: bun
+    args: ["/home/enio/egos/packages/knowledge-mcp/src/index.ts"]
+    timeout: 30
+
+  egos-guard-brasil:
+    command: bun
+    args: ["/home/enio/egos/packages/guard-brasil-mcp/src/index.ts"]
+    timeout: 30
+    # Tools: scan_pii, validate_lgpd, mask_content
+
+  egos-search:
+    command: bun
+    args: ["/home/enio/egos/packages/search-engine/src/mcp-server.ts"]
+    timeout: 60
+    # Tools: hybrid_search, semantic_search
+
+skills:
+  skill_nudge_iterations: 15
+  external_dirs:
+    - "/home/enio/hermes-egos/skills/egos-personas"
+
+plugins_enabled:
+  - egos-guard-brasil
+  - egos-anti-hallucination
+  - egos-kb-tools
+  - egos-billing                # Tracking de uso OpenRouter por cliente
+
+agent:
+  name: "Central EGOS Pro"
+  description: "Assistente governado com busca avançada e billing por uso"

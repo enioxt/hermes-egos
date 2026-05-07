@@ -1,0 +1,68 @@
+# Central EGOS — Profile: Solo
+# Tier: Solo (1 usuário, 1 domínio, custo mínimo)
+# Context budget: ~50k tokens alvo para trabalho útil
+#
+# GROK-CTX-002: Per-agent MCP Gateway
+# Solo carrega apenas 3 MCPs (mínimo necessário).
+# Enterprise tem 6 MCPs. A diferença: 60-90k tokens a menos de overhead.
+#
+# Ref: HARVEST.md P87 (context-bloat-math), docs/strategy/CHATGROK_INTEGRATION_PLAN.md
+
+model:
+  default: "google/gemini-2.0-flash-001"    # Barato para operação cotidiana
+  provider: "openrouter"
+
+# ── MCP Gateway: Solo carrega APENAS estes 3 servers ─────────────────────────
+# Total ferramentas: ~8 (4 governance + 4 memory)
+# Tokens estimados: ~1.700 (vs. 4+ servers = ~3.400+)
+mcp_servers:
+  egos-governance:
+    command: bun
+    args: ["/home/enio/egos/packages/mcp-governance/src/index.ts"]
+    timeout: 30
+    # Tools: ssot_drift_check, list_tasks, agent_status, repo_health
+
+  egos-memory:
+    command: bun
+    args: ["/home/enio/egos/packages/mcp-memory/src/index.ts"]
+    timeout: 30
+    # Tools: memory_store, memory_recall, memory_list, memory_delete,
+    #        resolve_memory_pointer, memory_budget_status
+
+  egos-knowledge:
+    command: bun
+    args: ["/home/enio/egos/packages/knowledge-mcp/src/index.ts"]
+    timeout: 30
+    # Tools: search_wiki, get_page, record_learning, get_stats
+
+# ── Skills: apenas skills essenciais ─────────────────────────────────────────
+skills:
+  skill_nudge_iterations: 20
+  external_dirs:
+    - "/home/enio/hermes-egos/skills/egos-personas"
+
+# ── Tool limits ───────────────────────────────────────────────────────────────
+tool_loop_guardrails:
+  soft:
+    same_tool_failure: 3
+  hard:
+    same_tool_failure: 5
+
+# ── Memory (context budget discipline) ────────────────────────────────────────
+# Mantém memória compacta para não inflar contexto
+memory:
+  enabled: true
+  user_profile_enabled: true
+
+# ── Plugins EGOS ──────────────────────────────────────────────────────────────
+# Plugins disponíveis neste tier
+# Veja: /home/enio/hermes-egos/plugins/
+plugins_enabled:
+  - egos-guard-brasil          # LGPD/PII masking — OBRIGATÓRIO em todos os tiers
+  - egos-anti-hallucination    # Vault evidence check
+  - egos-kb-tools              # KB do cliente
+
+# ── Identidade do agente ──────────────────────────────────────────────────────
+agent:
+  name: "Central EGOS Solo"
+  description: "Assistente governado para profissionais liberais e PMEs"

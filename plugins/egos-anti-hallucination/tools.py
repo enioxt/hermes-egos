@@ -4,6 +4,8 @@ Port de docs/knowledge/ANTI_HALLUCINATION_COMPLETE_GUIDE.md (EGOS kernel).
 
 Pitch: "Toda resposta tem prova. Você clica e vê o documento original.
         Se não tem prova, o sistema diz 'não encontro'."
+
+Inclui: Intent Guardrails (detecção de prompt injection ANTES de consultar KB).
 """
 
 import re
@@ -11,6 +13,68 @@ import os
 import json
 import urllib.request
 from typing import Optional
+
+
+# ─── Intent Guardrails (Pré-geração: detectar prompt injection) ────────────────
+
+_INJECTION_PATTERNS = [
+    # Tentativas clássicas de jailbreak
+    r"ignor[ae]\s+(todas?\s+as?\s+)?(instru[cç][oõ]es|regras|prompt|guidelines)",
+    r"esqueç[ae]\s+(tudo|as?\s+instru[cç][oõ]es)",
+    r"você\s+é\s+(agora|um)\s+(outro|diferente|novo)\s+(assistente|bot|ai)",
+    r"finja\s+que\s+você\s+é",
+    r"act\s+as\s+if\s+you\s+are",
+    r"ignore\s+(all\s+)?(previous\s+)?instructions",
+    r"reveal\s+(your\s+)?(system\s+)?prompt",
+    r"mostre?\s+(o\s+)?(seu\s+)?(prompt|instrução|system)\s+(do\s+sistema)?",
+    r"que\s+instruç[oõ]es\s+(você|voce)\s+recebeu",
+    # Tentativas de extração de dados
+    r"(liste|me\s+diga|mostre)\s+(todos?\s+os?\s+)?(document|arquivo|senha|password|chave|key|token)",
+    r"qual\s+(é|e)\s+(a\s+)?(senha|password|token|chave\s+de\s+api)",
+    r"quais?\s+(são|sao)\s+(os?\s+)?(dados|credenciais|config)",
+]
+
+import re
+
+_INJECTION_RE = [re.compile(p, re.IGNORECASE) for p in _INJECTION_PATTERNS]
+
+
+def detect_prompt_injection(text: str) -> dict:
+    """
+    Detecta tentativas de prompt injection ANTES de processar a query.
+    Chamado como Intent Guardrail (pré-geração).
+
+    Returns: {'is_injection': bool, 'confidence': float, 'matched_pattern': str | None}
+    """
+    for pattern in _INJECTION_RE:
+        m = pattern.search(text)
+        if m:
+            return {
+                "is_injection": True,
+                "confidence": 0.95,
+                "matched_pattern": pattern.pattern,
+                "matched_text": m.group()[:100],
+                "safe_response": (
+                    "Não consigo processar essa solicitação. "
+                    "Posso ajudar com consultas sobre os documentos da base de conhecimento."
+                ),
+            }
+
+    # Score heurístico simples para tentativas mais sutis
+    suspicious_score = 0.0
+    if "system" in text.lower() and "prompt" in text.lower():
+        suspicious_score += 0.4
+    if any(w in text.lower() for w in ["jailbreak", "dan", "do anything now"]):
+        suspicious_score += 0.8
+    if len(text) > 500 and text.count("\n") > 10:
+        suspicious_score += 0.2  # Texto muito longo com muitas linhas = suspeito
+
+    return {
+        "is_injection": suspicious_score >= 0.7,
+        "confidence": suspicious_score,
+        "matched_pattern": None,
+        "matched_text": None,
+    }
 
 
 # ─── Técnica 1: Provenance (cadeia de custódia) ────────────────────────────────

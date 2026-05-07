@@ -19,9 +19,12 @@ Diferencial comercial:
 """
 
 from agent.plugins import PluginContext
-from .schemas import VALIDATE_RAG_SCHEMA
-from .tools import validate_rag_response
+from .schemas import VALIDATE_RAG_SCHEMA, DETECT_INJECTION_SCHEMA
+from .tools import validate_rag_response, detect_prompt_injection
 
 
 def register(ctx: PluginContext) -> None:
+    # Intent Guardrail: chamar ANTES de qualquer busca na KB
+    ctx.register_tool("detect_prompt_injection", detect_prompt_injection, schema=DETECT_INJECTION_SCHEMA)
+    # Validação pós-geração: chamar ANTES de enviar resposta ao usuário
     ctx.register_tool("validate_rag_response", validate_rag_response, schema=VALIDATE_RAG_SCHEMA)

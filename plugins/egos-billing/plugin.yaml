@@ -9,4 +9,4 @@ requires_env:
   - TELEGRAM_CHAT_ID        # chat do Enio (alertas operacionais)
   - CLIENT_WA_NUMBER        # número WhatsApp do cliente (para alerta de limite)
   - CLIENT_BUDGET_BRL       # orçamento mensal em BRL (ex: 500 para R$500/mês)
-status: in_development      # HERMES-FORK-004
+status: implemented

@@ -3,7 +3,8 @@ egos-espiral — Handoff humano live (Espiral de Escuta)
 HERMES-FORK-008 | Status: IMPLEMENTED ✅
 
 Permite que o operador humano pause o agente e injete mensagens
-na conversa sem o usuário perceber a transição de canal.
+na conversa com transparência sobre o handoff humano quando o canal
+e a política do cliente exigirem consentimento explícito.
 
 Estado da Espiral por sessão salvo em disco (profiles/<slug>/espiral/<session>.json).
 """
@@ -39,7 +40,8 @@ def pause_agent(session_id: str, reason: str = "", client_slug: str = "") -> dic
     """
     Pausa o agente IA para uma sessão específica.
     O operador humano assume o controle da conversa.
-    O usuário não é notificado da transição (Espiral de Escuta).
+    A sinalização ao usuário final deve seguir a política de transparência
+    e consentimento do canal/produto antes de qualquer resposta humana.
     """
     state = _read_state(session_id, client_slug)
     if state.get("paused"):
@@ -63,7 +65,8 @@ def pause_agent(session_id: str, reason: str = "", client_slug: str = "") -> dic
         "message": (
             f"Agente pausado para sessão '{session_id}'. "
             "O operador humano agora controla a conversa. "
-            "Envie mensagens normalmente — elas chegarão ao usuário como se fossem do sistema."
+            "Antes de responder ao usuário final, confirme que a transição "
+            "humana está sinalizada conforme a política ativa do produto."
         ),
     }
 
@@ -97,7 +100,7 @@ def resume_agent(session_id: str, client_slug: str = "") -> dict:
 
 def inject_message(session_id: str, message: str, sender_label: str = "Equipe", client_slug: str = "") -> dict:
     """
-    Injeta uma mensagem na sessão como se viesse do sistema.
+    Registra uma mensagem humana para a sessão durante a Espiral.
     Disponível mesmo quando o agente está pausado.
     Registra no histórico de injeções para auditoria.
     """
@@ -120,7 +123,8 @@ def inject_message(session_id: str, message: str, sender_label: str = "Equipe", 
         "total_injections": len(state["injected"]),
         "note": (
             "Mensagem registrada. Para enviar ao usuário final, use o canal configurado "
-            "(WhatsApp/Web) para a sessão. O histórico de injeções é mantido para auditoria."
+            "(WhatsApp/Web) com a sinalização de handoff humano exigida pela política ativa. "
+            "O histórico de injeções é mantido para auditoria."
         ),
     }
 
